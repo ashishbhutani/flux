@@ -7,3 +7,5 @@ services:
 
 before_script:
   - mysql -e 'create database flux;'
+  - mvn -pl :persistence-mysql liquibase:update
+
