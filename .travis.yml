@@ -6,7 +6,7 @@ services:
   - mysql
 
 before_script:
-  - mysql -e 'create database flux;'
+  - mysql -u root -e 'create database flux;'
   - mvn -pl :persistence-mysql liquibase:update
 
 dist: trusty
