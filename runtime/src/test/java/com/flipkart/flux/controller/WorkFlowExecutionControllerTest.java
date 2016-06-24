@@ -64,6 +64,9 @@ public class WorkFlowExecutionControllerTest {
         workFlowExecutionController = new WorkFlowExecutionController(eventsDAO, stateMachinesDAO, routerRegistry);
         when(stateMachinesDAO.findById(anyLong())).thenReturn(TestUtils.getStandardTestMachine());
         actorSystem = ActorSystem.create();
+        if(actorSystem==null) {
+         System.out.println("actorSystem is null");
+        }
         mockActor = TestActorRef.create(actorSystem, Props.create(MockActorRef.class));
         when(routerRegistry.getRouter(anyString())).thenReturn(mockActor);
         objectMapper = new ObjectMapper();
@@ -71,12 +74,13 @@ public class WorkFlowExecutionControllerTest {
 
     @After
     public void tearDown() throws Exception {
-        mockActor.stop();
-        actorSystem.shutdown();
+        //mockActor.stop();
+        //actorSystem.shutdown();
     }
 
     @Test
     public void testEventPost_shouldLookupRouterAndSendMessage() throws Exception {
+        System.out.println("Starting test");
         final EventData testEventData = new EventData("event1", "foo", "someStringData", "runtime");
         when(eventsDAO.findBySMIdAndName(1l, "event1")).thenReturn(new Event("event1", "foo", Event.EventStatus.pending, 1l, null, null));
         Event[] expectedEvents = new Event[]{new Event("event1","someType", Event.EventStatus.triggered,1l,"someStringData","runtime")};
