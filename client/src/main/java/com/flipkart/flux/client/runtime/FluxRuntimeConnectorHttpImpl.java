@@ -14,11 +14,11 @@
 
 package com.flipkart.flux.client.runtime;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.flux.api.EventData;
 import com.flipkart.flux.api.StateMachineDefinition;
-import org.apache.commons.codec.binary.StringUtils;
-import org.apache.http.HttpResponse;
+import com.flipkart.flux.api.Status;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -43,6 +43,7 @@ public class FluxRuntimeConnectorHttpImpl implements FluxRuntimeConnector {
 
     public static final int MAX_TOTAL = 200;
     public static final int MAX_PER_ROUTE = 20;
+    public static final String EXTERNAL = "external";
     private final CloseableHttpClient closeableHttpClient;
     private final String fluxEndpoint;
     private final ObjectMapper objectMapper;
@@ -77,12 +78,61 @@ public class FluxRuntimeConnectorHttpImpl implements FluxRuntimeConnector {
         }
     }
 
+    @Override
+    public void submitEvent(EventData eventData, Long stateMachineId) {
+        CloseableHttpResponse httpResponse = null;
+        try {
+            httpResponse = postOverHttp(eventData, "/" + stateMachineId + "/context/events");
+        } finally {
+            HttpClientUtils.closeQuietly(httpResponse);
+        }
+    }
+
+    @Override
+    public void submitEvent(String name,Object data, String correlationId,String eventSource) {
+        final String eventType = data.getClass().getName();
+        if (eventSource == null) {
+            eventSource = EXTERNAL;
+        }
+        CloseableHttpResponse httpResponse = null;
+        try {
+            final EventData eventData = new EventData(name, eventType, objectMapper.writeValueAsString(data), eventSource);
+            httpResponse = postOverHttp(eventData, "/" + correlationId + "/context/events?searchField=correlationId");
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        } finally {
+            HttpClientUtils.closeQuietly(httpResponse);
+        }
+    }
+
+	/**
+	 * Interface method implementation. Updates the status in persistence store by invoking suitable Flux runtime API
+	 * @see com.flipkart.flux.client.runtime.FluxRuntimeConnector#updateExecutionStatus(java.lang.Long, com.flipkart.flux.api.Status)
+	 */
+	public void updateExecutionStatus(Long stateMachineId,Long taskId, Status status) {
+		CloseableHttpResponse httpResponse = null;
+        httpResponse = postOverHttp(status,  "/" + stateMachineId + "/" + taskId + "/status");
+        HttpClientUtils.closeQuietly(httpResponse);
+	}
+
+	/**
+	 * Interface method implementation. Increments the execution retries in persistence by invoking suitable Flux runtime API
+	 * @see com.flipkart.flux.client.runtime.FluxRuntimeConnector#incrementExecutionRetries(java.lang.Long, java.lang.Long)
+	 */
+	@Override
+	public void incrementExecutionRetries(Long stateMachineId,Long taskId) {
+		CloseableHttpResponse httpResponse = null;
+        httpResponse = postOverHttp(null,  "/" + stateMachineId + "/" + taskId + "/retries/inc");
+        HttpClientUtils.closeQuietly(httpResponse);
+	}
+	
+	/** Helper method to post data over Http */
     private CloseableHttpResponse postOverHttp(Object dataToPost, String pathSuffix)  {
         CloseableHttpResponse httpResponse = null;
         HttpPost httpPostRequest;
         httpPostRequest = new HttpPost(fluxEndpoint + pathSuffix);
-        final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         try {
+            final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             objectMapper.writeValue(byteArrayOutputStream, dataToPost);
             httpPostRequest.setEntity(new ByteArrayEntity(byteArrayOutputStream.toByteArray(), ContentType.APPLICATION_JSON));
             httpResponse = closeableHttpClient.execute(httpPostRequest);
@@ -101,13 +151,4 @@ public class FluxRuntimeConnectorHttpImpl implements FluxRuntimeConnector {
         return httpResponse;
     }
 
-    @Override
-    public void submitEvent(EventData eventData, Long stateMachineId) {
-        CloseableHttpResponse httpResponse = null;
-        try {
-            httpResponse = postOverHttp(eventData, "/" + stateMachineId + "/context/events");
-        } finally {
-            HttpClientUtils.closeQuietly(httpResponse);
-        }
-    }
 }

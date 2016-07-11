@@ -11,35 +11,39 @@
  * limitations under the License.
  */
 
-package com.flipkart.flux.api;
+package com.flipkart.flux.examples.externalevents;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.util.List;
+import com.flipkart.flux.client.model.Event;
 
 /**
- * The <code>WorkflowStatesDetail</code> class is a DTO for representing multiple states of Workflow
- *
- * @author ashish.bhutani
- *
+ * Carries verification status for a given SellerId
  */
-
-
-public class WorkflowStatesDetail {
+public class SellerVerificationStatus implements Event {
 
     @JsonProperty
-    private List<WorkflowStateDetail> statesDetail;
+    private SellerId sellerId;
 
-    /* Used for deserialisation by jackson */
-    WorkflowStatesDetail() {
+    @JsonProperty
+    private Boolean verified;
+
+    /* For Jackson */
+    SellerVerificationStatus() {
     }
 
-    public WorkflowStatesDetail(List<WorkflowStateDetail> statesDetail) {
-        this.statesDetail = statesDetail;
+    public SellerVerificationStatus(SellerId sellerId, Boolean verified) {
+        this.sellerId = sellerId;
+        this.verified = verified;
     }
 
-    /* Getter/Setters */
-    public List<WorkflowStateDetail> getStatesDetail() {
-        return statesDetail;
+    @JsonIgnore
+    public boolean isVerifiedSeller() {
+        return verified;
+    }
+
+
+    public SellerId getSellerId() {
+        return sellerId;
     }
 }

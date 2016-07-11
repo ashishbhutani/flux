@@ -11,15 +11,13 @@
  * limitations under the License.
  */
 
-package com.flipkart.flux.examples.di;
-
-import com.flipkart.flux.client.model.Promise;
-import com.flipkart.flux.client.model.Task;
-
+package com.flipkart.flux.api;
 /**
- * Dummy Storage Service that provides the capability of storing a message to a store
+ * <code>Status</code> Describes the current status of execution {@link Task} within a {@link State}
+ * 
+ * @author Yogesh
+ * @author regunath.balasubramanian
  */
-public interface StorageService {
-    @Task(version = 1, timeout = 1000l)
-    Promise<Long> store(Message message);
+public enum  Status {
+    initialized, running, completed, cancelled, errored, sidelined; //possible statuses of execution
 }

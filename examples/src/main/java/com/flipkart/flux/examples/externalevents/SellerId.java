@@ -11,36 +11,31 @@
  * limitations under the License.
  */
 
-package com.flipkart.flux.resource;
+package com.flipkart.flux.examples.externalevents;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.flipkart.flux.client.model.CorrelationId;
+import com.flipkart.flux.client.model.Event;
 
-/**
- * Used in visualisation APIs, this Represents a vertex in the graph representation of an fsm
- * Note that we cannot use plain State Names as vertices since multiple states can have the same name
- * @author yogesh.nachnani
- */
-public class FsmGraphVertex {
-
-    /* The unique id for a vertex */
+public class SellerId implements Event {
     @JsonProperty
     private Long id;
-    /* Label to show on the vertex */
-    @JsonProperty
-    private String label;
+
+    @JsonIgnore
+    @CorrelationId
+    private String correlationId;
 
     /* For Jackson */
-    FsmGraphVertex() {
-        this(null,null);
+    SellerId() {
+    }
+    public SellerId(Long id) {
+        this(id,null);
     }
 
-    public FsmGraphVertex(Long id, String label) {
+    public SellerId(Long id, String correlationId) {
         this.id = id;
-        this.label = (label == null ? "" : label.trim());
-    }
-
-    public Long getId() {
-        return id;
+        this.correlationId = correlationId;
     }
 
     @Override
@@ -48,22 +43,21 @@ public class FsmGraphVertex {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        FsmGraphVertex that = (FsmGraphVertex) o;
+        SellerId sellerId = (SellerId) o;
 
-        if (!id.equals(that.id)) return false;
-        return label.equals(that.label);
+        return id.equals(sellerId.id);
 
     }
 
     @Override
     public int hashCode() {
-        int result = id.hashCode();
-        result = 31 * result + label.hashCode();
-        return result;
+        return id.hashCode();
     }
 
     @Override
     public String toString() {
-        return id + ":" + label;
+        return "SellerId{" +
+            "id=" + id +
+            '}';
     }
 }

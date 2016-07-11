@@ -11,19 +11,18 @@
  * limitations under the License.
  */
 
-package com.flipkart.flux.examples.orderfulfilment;
+package com.flipkart.flux.examples.externalevents;
 
-import com.flipkart.flux.client.model.Promise;
+import com.flipkart.flux.client.model.ExternalEvent;
 import com.flipkart.flux.client.model.Task;
 
-/**
- * Dummy service to run warehouse operations
- */
-public class WarehouseService {
+import javax.inject.Singleton;
+
+@Singleton
+public class ManualSellerVerificationService {
     @Task(version = 1, timeout = 1000l)
-    public Promise<PackedOrder> packOrder(Promise<ConfirmedOrder> createdOrderPromise) {
-        // Sends out a notification (probably to a human console) to indicate that this order needs to be packed
-        createdOrderPromise.get().pack();
-        return new Promise<PackedOrder>(new PackedOrder());
+    public SellerVerificationStatus waitForVerification(@ExternalEvent("sellerVerification")SellerVerificationStatus verificationStatus) {
+        System.out.println("[ManualSellerVerificationService] Received verification status " + verificationStatus.isVerifiedSeller() + " for seller " + verificationStatus.getSellerId());
+        return verificationStatus;
     }
 }

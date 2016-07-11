@@ -13,6 +13,7 @@
 
 package com.flipkart.flux.dao.iface;
 
+import com.flipkart.flux.api.EventData;
 import com.flipkart.flux.domain.Event;
 
 import java.util.List;
@@ -46,5 +47,5 @@ public interface EventsDAO {
     public List<Event> findTriggeredEventsBySMId(Long stateMachineInstanceId);
 
     /** Retrieves list of events by their names and state machine id */
-    public List<Event> findByEventNamesAndSMId(Set<String> eventNames, Long stateMachineInstanceId);
+    public List<EventData> findByEventNamesAndSMId(Set<String> eventNames, Long stateMachineInstanceId);
 }

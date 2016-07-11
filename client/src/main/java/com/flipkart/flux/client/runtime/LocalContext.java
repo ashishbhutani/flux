@@ -24,7 +24,6 @@ import org.apache.commons.lang3.mutable.MutableInt;
 
 import java.util.*;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 /**
  * Maintains all local flux related context
@@ -52,12 +51,12 @@ public class LocalContext {
      * @param version
      * @param description
      */
-    public void registerNew(String methodIdentifier, long version, String description) {
+    public void registerNew(String methodIdentifier, long version, String description,String correlationId) {
         if (this.stateMachineDefinition.get() != null) {
             /* This ensures we don't compose workflows within workflows */
             throw new IllegalStateException("A single thread cannot execute more than one workflow");
         }
-        stateMachineDefinition.set(new StateMachineDefinition(description,methodIdentifier, version, new HashSet<>(), new HashSet<>()));
+        stateMachineDefinition.set(new StateMachineDefinition(description,methodIdentifier, version, new HashSet<>(), new HashSet<>(), correlationId));
         tlUniqueEventCount.set(new MutableInt(0));
         this.eventNames.set(new IdentityHashMap<>());
     }
@@ -121,11 +120,11 @@ public class LocalContext {
         return event.name() + currentEventNumber;
     }
 
-    /*
-        Checks if the given definition already exists as part of the current state machine.
-        Also, throws an <code>IllegalInvocationException</code> when it encounters that the given definition's
-        name is already used by another definition with a different type
-      */
+    /**
+     * Checks if the given definition already exists as part of the current state machine.
+     * Also, throws an <code>IllegalInvocationException</code> when it encounters that the given definition's
+     * name is already used by another definition with a different type
+     */
     public EventDefinition checkExistingDefinition(final EventDefinition givenDefinition) {
         /* This may seem like an expensive operation, we can optimise if necessary */
         final StateMachineDefinition stateMachineDefinition = this.stateMachineDefinition.get();

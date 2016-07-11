@@ -13,17 +13,33 @@
 
 package com.flipkart.flux.examples.externalevents;
 
-import com.flipkart.flux.client.model.ExternalEvent;
-import com.flipkart.flux.client.model.Task;
-import com.flipkart.flux.examples.decision.UserVerificationStatus;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.flipkart.flux.client.model.Event;
 
-import javax.inject.Singleton;
+/**
+ * Represents a given seller's current stats
+ */
+public class SellerData implements Event {
 
-@Singleton
-public class ManualUserVerificationService {
-    @Task(version = 1, timeout = 1000l)
-    public UserVerificationStatus waitForVerification(@ExternalEvent("userVerification")UserVerificationStatus verificationStatus) {
-        System.out.println("[ManualUserVerificationService] Received verification status " + verificationStatus.isVerifiedUser() + " for user " + verificationStatus.getUserId());
-        return verificationStatus;
+    @JsonProperty
+    private String name;
+
+    @JsonProperty
+    private String email;
+
+    private SellerId sellerId;
+
+    /* For Jackson & cglib */
+    SellerData() {
+    }
+
+    public SellerData(String email, String name, SellerId sellerId) {
+        this.email = email;
+        this.name = name;
+        this.sellerId = sellerId;
+    }
+
+    public SellerId getSellerId() {
+        return sellerId;
     }
 }

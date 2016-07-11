@@ -16,6 +16,7 @@ package com.flipkart.flux.client.runtime;
 
 import com.flipkart.flux.api.EventData;
 import com.flipkart.flux.api.StateMachineDefinition;
+import com.flipkart.flux.api.Status;
 
 /**
  * Used to connect with the core Flux Runtime
@@ -28,4 +29,28 @@ public interface FluxRuntimeConnector {
     void submitNewWorkflow(StateMachineDefinition stateMachineDef);
     /* Post the event generated as a result of task execution back to the core runtime */
     void submitEvent(EventData eventData, Long stateMachineId);
+
+    /**
+     * Post an arbitrary event against a previously registered correlationId
+     * @param name name of the event. Should be the same as the name given using <code>ExternalEvent</code> annotation
+     * @param data data to post against the given event name
+     * @param correlationId the string used to identify a workflow instance (as passed using <code>CorrelationId</code> annotation
+     * @param eventSource optional string to denote an event source
+     */
+    void submitEvent(String name, Object data,String correlationId,String eventSource);
+    
+    /**
+     * Updates the status of the Task identified by the specified Task ID to the Status specified
+     * @param stateMachineId the state machine identifier
+     * @param taskId identifier for the Task whose status is to be updated
+     * @param status the Task status
+     */
+    void updateExecutionStatus(Long stateMachineId, Long taskId, Status status);
+    
+    /**
+     * Increments the attempted retries count for the Task identified by the specified task Id
+     * @param stateMachineId the state machine identifier
+     * @param taskId identifier for the Task whose retry count is to be updated
+     */
+    void incrementExecutionRetries(Long stateMachineId, Long taskId);
 }

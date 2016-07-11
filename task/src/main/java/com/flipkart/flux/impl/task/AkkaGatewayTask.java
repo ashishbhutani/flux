@@ -17,9 +17,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import javax.inject.Inject;
 
 import com.flipkart.flux.api.EventData;
+import com.flipkart.flux.api.core.Task;
 import com.flipkart.flux.client.runtime.FluxRuntimeConnector;
 import com.flipkart.flux.domain.Event;
-import com.flipkart.flux.domain.Task;
 import com.flipkart.flux.impl.message.TaskAndEvents;
 
 import akka.actor.ActorRef;
@@ -43,7 +43,7 @@ public class AkkaGatewayTask extends UntypedActor {
 	/** Counter to help create unique actor names*/
 	private static final AtomicLong INSTANCE_COUNTER = new AtomicLong();
     
-	/** The Flux Runtime Connector instance for dispatching processed EventS*/
+	/** The Flux Runtime Connector instance for dispatching processed EventS and execution status updates*/
 	@Inject
 	private static FluxRuntimeConnector fluxRuntimeConnector;
     

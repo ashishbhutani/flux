@@ -27,9 +27,7 @@ import com.flipkart.flux.domain.StateMachine;
 import com.flipkart.flux.impl.RAMContext;
 import com.flipkart.flux.representation.IllegalRepresentationException;
 import com.flipkart.flux.representation.StateMachinePersistenceService;
-import com.google.common.base.Functions;
 import com.google.inject.Inject;
-import org.apache.commons.lang3.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,22 +38,29 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
-import java.util.*;
-import java.util.function.Function;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 
 /**
- * @understands Exposes APIs for end users
+ * <code>StateMachineResource</code> exposes APIs to perform state machine related operations. Ex: Creating SM, receiving event for a SM
+ * @author shyam.akirala
+ * @author yogesh
+ * @author regunath.balasubramanian
  */
 
 @Singleton
 @Path("/api/machines")
 @Named
 public class StateMachineResource {
-	
-	/** Single white space label to denote start of processing i.e. the Trigger*/
+
+    /** Single white space label to denote start of processing i.e. the Trigger*/
 	private static final String TRIGGER = " ";
+
+    public static final String CORRELATION_ID = "correlationId";
 
     StateMachinePersistenceService stateMachinePersistenceService;
 
@@ -76,6 +81,7 @@ public class StateMachineResource {
         objectMapper = new ObjectMapper();
     }
 
+    /** Logger instance for this class*/
     private static final Logger logger = LoggerFactory.getLogger(StateMachineResource.class);
 
     /**
@@ -111,15 +117,76 @@ public class StateMachineResource {
 
     @POST
     @Path("/{machineId}/context/events")
-    public Response submitEvent(@PathParam("machineId") Long machineId,
-                            EventData eventData
+    public Response submitEvent(@PathParam("machineId") String machineId,
+                                @QueryParam("searchField") String searchField,
+                                EventData eventData
                             ) throws Exception {
-        //retrieves states which are dependant on this event and starts execution of states which can be executable
-        Set<State> triggeredStates = workFlowExecutionController.postEvent(eventData, machineId);
-        return Response.status(Response.Status.ACCEPTED.getStatusCode()).entity(objectMapper.writeValueAsString(triggeredStates)).build();
+        if (searchField != null) {
+            if (!searchField.equals(CORRELATION_ID)) {
+                return Response.status(Response.Status.BAD_REQUEST).build();
+            }
+            workFlowExecutionController.postEvent(eventData, null, machineId);
+        } else {
+            workFlowExecutionController.postEvent(eventData, Long.valueOf(machineId), null);
+        }
+        return Response.status(Response.Status.ACCEPTED.getStatusCode()).build();
     }
 
-
+    /**
+     * Updates the status of the specified Task under the specified State machine
+     * @param machineId the state machine identifier
+     * @param stateId the task/state identifier
+     * @param status the Status 
+     * @return Response with execution status code
+     * @throws Exception
+     */
+    @POST
+    @Path("/{machineId}/{stateId}/status")
+    public Response updateStatus(@PathParam("machineId") Long machineId,
+                                @PathParam("stateId") Long stateId,
+                                com.flipkart.flux.api.Status status
+                            ) throws Exception {
+    	com.flipkart.flux.domain.Status updateStatus = null;
+		switch (status) {
+			case initialized:
+				updateStatus = com.flipkart.flux.domain.Status.initialized;
+				break;
+			case running:
+				updateStatus = com.flipkart.flux.domain.Status.running;
+				break;
+			case completed:
+				updateStatus = com.flipkart.flux.domain.Status.completed;
+				break;
+			case cancelled:
+				updateStatus = com.flipkart.flux.domain.Status.cancelled;
+				break;
+			case errored:
+				updateStatus = com.flipkart.flux.domain.Status.errored;
+				break;
+			case sidelined:
+				updateStatus = com.flipkart.flux.domain.Status.sidelined;
+				break;
+    	}
+		this.workFlowExecutionController.updateExecutionStatus(machineId, stateId, updateStatus);
+    	return Response.status(Response.Status.ACCEPTED.getStatusCode()).build();
+    }
+    
+    /**
+     * Increments the retry count for the specified Task under the specified State machine
+     * @param machineId the state machine identifier
+     * @param stateId the task/state identifier
+     * @return Response with execution status code
+     * @throws Exception
+     */
+    @POST
+    @Path("/{machineId}/{stateId}/retries/inc")
+    public Response incrementRetry(@PathParam("machineId") Long machineId,
+                                @PathParam("stateId") Long stateId
+                            ) throws Exception {
+    	this.workFlowExecutionController.incrementExecutionRetries(machineId, stateId);
+    	return Response.status(Response.Status.ACCEPTED.getStatusCode()).build();
+    }
+    
     /**
      * Cancel a machine being executed.*
      * @param machineId The machineId to be cancelled
@@ -167,14 +234,14 @@ public class StateMachineResource {
             if(state.getOutputEvent() != null) {
                 EventDefinition eventDefinition = objectMapper.readValue(state.getOutputEvent(), EventDefinition.class);
                 final Event outputEvent = stateMachineEvents.get(eventDefinition.getName());
-                final FsmGraphVertex vertex = new FsmGraphVertex(state.getId(), getDisplayName(state.getName()));
+                final FsmGraphVertex vertex = new FsmGraphVertex(state.getId(), getStateDisplayName(state.getName()));
                 fsmGraph.addVertex(vertex,
-                    new FsmGraphEdge(getDisplayName(outputEvent.getName()), outputEvent.getStatus().name(),outputEvent.getEventSource()));
+                    new FsmGraphEdge(getEventDisplayName(outputEvent.getName()), outputEvent.getStatus().name(),outputEvent.getEventSource()));
                 final Set<State> dependantStates = ramContext.getDependantStates(outputEvent.getName());
                 dependantStates.forEach((aState) -> fsmGraph.addOutgoingEdge(vertex, aState.getId()));
                 allOutputEventNames.add(outputEvent.getName()); // we collect all output event names and use them below.
             } else {
-                fsmGraph.addVertex(new FsmGraphVertex(state.getId(),this.getDisplayName(state.getName())),null);
+                fsmGraph.addVertex(new FsmGraphVertex(state.getId(),this.getStateDisplayName(state.getName())),null);
             }
         }
 
@@ -192,7 +259,7 @@ public class StateMachineResource {
         eventsGivenOnWorkflowTrigger.removeAll(allOutputEventNames);
         eventsGivenOnWorkflowTrigger.forEach((workflowTriggeredEventName) -> {
             final Event correspondingEvent = stateMachineEvents.get(workflowTriggeredEventName);
-            final FsmGraphEdge initEdge = new FsmGraphEdge(this.getDisplayName(workflowTriggeredEventName), correspondingEvent.getStatus().name(),correspondingEvent.getEventSource());
+            final FsmGraphEdge initEdge = new FsmGraphEdge(this.getEventDisplayName(workflowTriggeredEventName), correspondingEvent.getStatus().name(),correspondingEvent.getEventSource());
             final Set<State> dependantStates = ramContext.getDependantStates(workflowTriggeredEventName);
             dependantStates.forEach((state) -> initEdge.addOutgoingVertex(state.getId()));
             fsmGraph.addInitStateEdge(initEdge);
