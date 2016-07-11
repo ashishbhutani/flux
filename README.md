@@ -2,6 +2,8 @@
 Flux is an asynchronous, scalable, optionally multi-tenant & distributed and reliable state machine based orchestrator. 
 Flux can be used to build Workflows and Reactive apps that are stateful. 
 
+[![Build Status](https://travis-ci.org/ashishbhutani/flux.svg?branch=master)](https://travis-ci.org/ashishbhutani/flux)
+
 ## Releases
 | Release | Date | Description |
 |:------------|:----------------|:------------|
